@@ -32,7 +32,7 @@ pub struct LRUCache<K, V, const H: usize = 100> {
     hash_indices: Box<[Option<Rc<RefCell<Node<K, V>>>>; H]>,
 }
 
-impl<K: Hash + PartialEq<K> + Clone, V, const H: usize> LRUCache<K, V, H> {
+impl<K: Hash + PartialEq<K>, V, const H: usize> LRUCache<K, V, H> {
     pub fn new(max_size: usize) -> Self {
         Self {
             max_size,
@@ -43,7 +43,11 @@ impl<K: Hash + PartialEq<K> + Clone, V, const H: usize> LRUCache<K, V, H> {
         }
     }
 
-    pub fn get<T: std::borrow::Borrow<K>>(&mut self, key: T, then: fn(&V)) {
+    pub fn get<T, F>(&mut self, key: T, then: F)
+    where
+        T: std::borrow::Borrow<K>,
+        F: Fn(&V),
+    {
         if let Some(node) = self.find_node_by_key(key.borrow()) {
             self.move_node_to_list_head(node.clone());
             then(&node.borrow().val)
@@ -175,5 +179,22 @@ mod tests {
 
         cache.get(1, |v| println!("get: {:?}", v));
         cache.get(2, |v| println!("get: {:?}", v));
+
+        println!("total_size: {:?}", cache.total_size);
+    }
+
+    #[test]
+    fn test_02() {
+        let mut cache: LRUCache<&str, Point> = LRUCache::new(10);
+
+        for i in 0..10 {
+            cache.set("1", Point { x: 1, y: 1 });
+            cache.set("2", Point { x: 2, y: 2 });
+        }
+
+        cache.get("1", |v| println!("get: {:?}", v));
+        cache.get("2", |v| println!("get: {:?}", v));
+
+        println!("total_size: {:?}", cache.total_size);
     }
 }
