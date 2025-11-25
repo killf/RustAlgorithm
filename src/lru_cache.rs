@@ -71,7 +71,7 @@ impl<K: Hash + PartialEq<K>, V, const H: usize> LRUCache<K, V, H> {
             self.move_node_to_list_head(node.clone());
             node.borrow_mut().val = val;
         } else {
-            let node = Rc::new(RefCell::new(Node::<K, V>::new(key, val)));
+            let node = Rc::new(RefCell::new(Node::new(key, val)));
 
             if let Some(list_header) = self.list_header.clone() {
                 list_header.borrow_mut().list_prev = Some(node.clone());
