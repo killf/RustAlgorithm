@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{Ref, RefCell};
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::rc::Rc;
 
@@ -24,7 +24,7 @@ impl<K, V> Node<K, V> {
     }
 }
 
-pub struct LRUCache<K, V, const H: usize> {
+pub struct LRUCache<K, V, const H: usize = 100> {
     max_size: usize,
     total_size: usize,
     list_header: Option<Rc<RefCell<Node<K, V>>>>,
@@ -43,10 +43,20 @@ impl<K: Hash + PartialEq<K> + Clone, V, const H: usize> LRUCache<K, V, H> {
         }
     }
 
-    pub fn get(&mut self, key: &K) -> Option<&V> {
-        if let Some(node) = self.find_node_by_key(key) {
+    pub fn get<T: std::borrow::Borrow<K>>(&mut self, key: T, then: fn(&V)) {
+        if let Some(node) = self.find_node_by_key(key.borrow()) {
             self.move_node_to_list_head(node.clone());
-            Some(&node.borrow().val)
+            then(&node.borrow().val)
+        }
+    }
+
+    pub fn try_get<T: std::borrow::Borrow<K>>(&mut self, key: T) -> Option<V>
+    where
+        V: Clone,
+    {
+        if let Some(node) = self.find_node_by_key(key.borrow()) {
+            self.move_node_to_list_head(node.clone());
+            Some(node.borrow().val.clone())
         } else {
             None
         }
@@ -149,6 +159,7 @@ impl<K: Hash + PartialEq<K> + Clone, V, const H: usize> LRUCache<K, V, H> {
 mod tests {
     use super::*;
 
+    #[derive(Debug)]
     struct Point {
         x: i32,
         y: i32,
@@ -156,31 +167,13 @@ mod tests {
 
     #[test]
     fn test_01() {
-        let mut cache: LRUCache<i32, i32, 100> = LRUCache::new(10);
+        let mut cache: LRUCache<i32, i32> = LRUCache::new(10);
 
         cache.set(1, 1);
         cache.set(2, 2);
         cache.set(2, 3);
 
-        let v = cache.get(&1);
-        println!("get: {:?}", v);
-
-        let v = cache.get(&2);
-        println!("get: {:?}", v);
+        cache.get(1, |v| println!("get: {:?}", v));
+        cache.get(2, |v| println!("get: {:?}", v));
     }
-
-    // #[test]
-    // fn test_02() {
-    //     let mut cache: LRUCache<&str, Point, 100> = LRUCache::new(10);
-    //
-    //     cache.set(1, 1);
-    //     cache.set(2, 2);
-    //     cache.set(2, 3);
-    //
-    //     let v = cache.get(&1);
-    //     println!("get: {:?}", v);
-    //
-    //     let v = cache.get(&2);
-    //     println!("get: {:?}", v);
-    // }
 }
